@@ -1,0 +1,51 @@
+name: Compilar Alternador ESP32
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'Alternador_OTA.ino'
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+
+      - name: Instalar ESP32 Core 3.3.12
+        run: |
+          arduino-cli config init
+          arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+          arduino-cli core install esp32:esp32@3.3.12 --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
+
+      - name: Instalar librerias
+        run: |
+          arduino-cli lib install "WiFiManager"
+          arduino-cli lib install "Adafruit MQTT Library"
+
+      - name: Preparar sketch
+        run: |
+          mkdir -p Alternador_OTA
+          cp Alternador_OTA.ino Alternador_OTA/Alternador_OTA.ino
+
+      - name: Compilar ESP32 Dev Module
+        run: |
+          arduino-cli compile \
+            --fqbn esp32:esp32:esp32 \
+            --output-dir build \
+            Alternador_OTA
+
+      - name: Preparar binario OTA
+        run: |
+          cp build/Alternador_OTA.ino.bin Alternador_OTA.ino.bin
+
+      - name: Guardar binario
+        uses: actions/upload-artifact@v4
+        with:
+          name: Alternador-OTA
+          path: Alternador_OTA.ino.bin
